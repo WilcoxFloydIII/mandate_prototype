@@ -1,10 +1,12 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Users, Building2, CalendarCheck2, ShieldCheck } from 'lucide-react';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Users, Building2, CalendarCheck2, ShieldCheck, ArrowRight } from 'lucide-react';
 import { DesktopShell } from '../../components/layout/DesktopShell';
 import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
 import { ADMIN_NAV } from '../../config/navigation';
 import { users, departments, institution, academicSession, currentSemester, adminActivityLog, getUserById, getInstitutionSnapshot } from '../../data/mockData';
 import { KPICard } from '../../components/shared/KPICard';
+import { ActivityLogPanel } from './ActivityLogPanel';
+import { ReportsPanel } from './ReportsPanel';
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -34,8 +36,19 @@ function AdminHome() {
         <KPICard label="Institution attendance" value={`${snapshot.avgAttendancePct}%`} icon={ShieldCheck} tone={snapshot.avgAttendancePct >= 75 ? 'good' : 'warn'} hint="75% NUC threshold" />
       </div>
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-sm font-semibold text-zinc-900 dark:text-white">Recent activity</p>
-        <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">Latest entries from the institutional audit trail</p>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white">Recent activity</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Latest entries from the institutional audit trail</p>
+          </div>
+          <Link
+            to="activity-log"
+            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+          >
+            View all
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
         <ul className="divide-y divide-zinc-50 dark:divide-zinc-800">
           {adminActivityLog.slice(0, 8).map((entry) => {
             const actor = entry.actorId ? getUserById(entry.actorId) : null;
@@ -67,8 +80,8 @@ export function AdminDashboard() {
         <Route path="timetable" element={<SectionPlaceholder title="Timetable Editor" />} />
         <Route path="courses" element={<SectionPlaceholder title="Courses" />} />
         <Route path="sessions" element={<SectionPlaceholder title="Sessions" description="Academic session lifecycle and Exam Eligibility Lock." />} />
-        <Route path="reports" element={<SectionPlaceholder title="Reports" />} />
-        <Route path="activity-log" element={<SectionPlaceholder title="Activity Log" description="The full searchable audit trail arrives in the next build pass." />} />
+        <Route path="reports" element={<ReportsPanel />} />
+        <Route path="activity-log" element={<ActivityLogPanel />} />
         <Route path="settings" element={<SectionPlaceholder title="Settings" />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>

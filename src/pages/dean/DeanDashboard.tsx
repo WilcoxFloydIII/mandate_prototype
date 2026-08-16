@@ -9,6 +9,7 @@ import { getUserById, getFacultyById, getFacultySnapshot, getDepartmentSnapshot,
 import { KPICard } from '../../components/shared/KPICard';
 import { ComparisonChart } from '../../components/shared/ComparisonChart';
 import { DepartmentSnapshotModal } from '../../components/shared/DepartmentSnapshotModal';
+import { ReportsPanel } from './ReportsPanel';
 import type { Department } from '../../types';
 
 function DeanHome() {
@@ -79,7 +80,7 @@ export function DeanDashboard() {
         <Route path="dashboard" element={<DeanHome />} />
         <Route path="departments" element={<DepartmentsList />} />
         <Route path="departments/:deptId" element={<SectionPlaceholder title="Department Detail" description="Click a department from the list — the full read-only HOD view is next." />} />
-        <Route path="reports" element={<SectionPlaceholder title="Reports" />} />
+        <Route path="reports" element={<ReportsPanel />} />
         <Route path="schedule-approvals" element={<SectionPlaceholder title="Schedule Approvals" description="View only — approvals are managed at department level." />} />
         <Route path="settings" element={<SectionPlaceholder title="Settings" />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />

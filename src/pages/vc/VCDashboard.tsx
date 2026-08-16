@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Landmark, AlertTriangle, GraduationCap, Building2 } from 'lucide-react';
 import { DesktopShell } from '../../components/layout/DesktopShell';
-import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
 import { VC_NAV } from '../../config/navigation';
 import { useSessionStore } from '../../store/useSessionStore';
 import { getUserById, departments, getDepartmentSnapshot, getDepartmentById, getFacultyComparison, institution } from '../../data/mockData';
@@ -10,6 +9,7 @@ import { KPICard } from '../../components/shared/KPICard';
 import { ComparisonChart } from '../../components/shared/ComparisonChart';
 import { DepartmentSnapshotModal } from '../../components/shared/DepartmentSnapshotModal';
 import { FacultyDrilldown } from './FacultyDrilldown';
+import { ReportsPanel } from './ReportsPanel';
 import type { Department } from '../../types';
 
 function VCHome() {
@@ -82,7 +82,7 @@ export function VCDashboard() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VCHome />} />
         <Route path="faculties/:facultyId" element={<FacultyDrilldown />} />
-        <Route path="reports" element={<SectionPlaceholder title="Reports" />} />
+        <Route path="reports" element={<ReportsPanel />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
     </DesktopShell>

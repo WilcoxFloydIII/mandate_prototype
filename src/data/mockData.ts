@@ -858,3 +858,73 @@ export function getFacultyComparison(): ComparisonDatum[] {
 export function getDepartmentComparison(facultyId: string): ComparisonDatum[] {
   return getDepartmentsForFaculty(facultyId).map((d) => ({ id: d.id, name: d.shortName, value: getDepartmentSnapshot(d.id).avgAttendancePct }));
 }
+
+/* ════════════════════════════════════════════════════════════════
+   HOD roster + per-person overview selectors
+   Added for the Students / Lecturers list-and-detail screens (P0.1,
+   P0.2) — the department-scoped "who" behind the at-risk counts
+   already surfaced on the dashboards above.
+   ════════════════════════════════════════════════════════════════ */
+
+export function getStudentsForDepartment(departmentId: string): User[] {
+  return users.filter((u) => u.role === 'student' && u.departmentId === departmentId);
+}
+export function getLecturersForDepartment(departmentId: string): User[] {
+  return users.filter((u) => u.role === 'lecturer' && u.departmentId === departmentId);
+}
+
+export interface StudentOverview {
+  overallAttendancePct: number;
+  coursesEnrolled: number;
+  coursesAtRisk: number;
+}
+/** Aggregates a student's per-course threshold summaries into one overall figure — attended/total across every enrolled course, not an average of percentages, so it matches the arithmetic a sharp investor would check by hand. */
+export function getStudentOverview(studentId: string): StudentOverview {
+  const summaries = getThresholdSummariesForStudent(studentId);
+  const totalAttended = summaries.reduce((sum, s) => sum + s.attendedClasses, 0);
+  const totalClasses = summaries.reduce((sum, s) => sum + s.totalClasses, 0);
+  const overallAttendancePct = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 1000) / 10 : 0;
+  return {
+    overallAttendancePct,
+    coursesEnrolled: summaries.length,
+    coursesAtRisk: summaries.filter((s) => !s.isEligible).length,
+  };
+}
+
+export interface LecturerOverview {
+  overallAttendancePct: number;
+  coursesTaught: number;
+  classesHeld: number;
+  meetsThreshold: boolean;
+}
+export function getLecturerOverview(lecturerId: string): LecturerOverview {
+  const summaries = getLecturerSummariesForLecturer(lecturerId);
+  const totalAttended = summaries.reduce((sum, s) => sum + s.attendedClasses, 0);
+  const totalClasses = summaries.reduce((sum, s) => sum + s.totalClasses, 0);
+  const overallAttendancePct = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 1000) / 10 : 0;
+  return {
+    overallAttendancePct,
+    coursesTaught: summaries.length,
+    classesHeld: totalClasses,
+    meetsThreshold: totalClasses > 0 && overallAttendancePct >= institution.defaultThresholdPct,
+  };
+}
+
+export interface LecturerAbsence {
+  classInstanceId: string;
+  courseCode: string;
+  courseTitle: string;
+  instanceDate: string;
+  venueName: string;
+}
+/** Completed sessions for this lecturer with no lecturer attendance record — the same condition the seed data's own 'lecturer_absent' activity-log entries are generated from. */
+export function getLecturerAbsences(lecturerId: string): LecturerAbsence[] {
+  return classInstances
+    .filter((ci) => ci.lecturerId === lecturerId && ci.status === 'completed')
+    .filter((ci) => !attendanceRecords.some((ar) => ar.classInstanceId === ci.id && ar.userId === lecturerId))
+    .map((ci) => {
+      const course = getCourseUnitById(ci.courseUnitId)!;
+      return { classInstanceId: ci.id, courseCode: course.code, courseTitle: course.title, instanceDate: ci.instanceDate, venueName: ci.venueName };
+    })
+    .sort((a, b) => new Date(b.instanceDate).getTime() - new Date(a.instanceDate).getTime());
+}

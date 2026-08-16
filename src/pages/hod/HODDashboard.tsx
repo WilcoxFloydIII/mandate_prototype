@@ -8,6 +8,11 @@ import { getUserById, getDepartmentById, getDepartmentSnapshot } from '../../dat
 import { KPICard } from '../../components/shared/KPICard';
 import { CorrectionsPanel } from './CorrectionsPanel';
 import { AlertsPanel } from './AlertsPanel';
+import { StudentsPanel } from './StudentsPanel';
+import { StudentDetailDrawer } from './StudentDetailDrawer';
+import { LecturersPanel } from './LecturersPanel';
+import { LecturerDetailDrawer } from './LecturerDetailDrawer';
+import { ReportsPanel } from './ReportsPanel';
 
 function HODHome() {
   const userId = useSessionStore((s) => s.currentUserId);
@@ -38,12 +43,12 @@ export function HODDashboard() {
       <Routes>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<HODHome />} />
-        <Route path="students" element={<SectionPlaceholder title="Students" />} />
-        <Route path="students/:studentId" element={<SectionPlaceholder title="Student Detail" />} />
-        <Route path="lecturers" element={<SectionPlaceholder title="Lecturers" />} />
-        <Route path="lecturers/:lecturerId" element={<SectionPlaceholder title="Lecturer Detail" />} />
+        <Route path="students" element={<StudentsPanel />} />
+        <Route path="students/:studentId" element={<StudentDetailDrawer />} />
+        <Route path="lecturers" element={<LecturersPanel />} />
+        <Route path="lecturers/:lecturerId" element={<LecturerDetailDrawer />} />
         <Route path="timetable" element={<SectionPlaceholder title="Timetable Management" />} />
-        <Route path="reports" element={<SectionPlaceholder title="Reports" />} />
+        <Route path="reports" element={<ReportsPanel />} />
         <Route path="corrections" element={<CorrectionsPanel />} />
         <Route path="alerts" element={<AlertsPanel />} />
         <Route path="settings" element={<SectionPlaceholder title="Settings" />} />
