@@ -199,3 +199,29 @@ export interface AdminActivityLogEntry {
   metadata: Record<string, unknown>;
   createdAt: string;
 }
+
+export type ScheduleApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+/**
+ * The timetable-authoring layer above class_instances (PRD Section 3e's
+ * scheduled_classes). Not present in the file as received — added here,
+ * additively, for P1.8.
+ */
+export interface ScheduledClassSubmission {
+  id: string;
+  courseUnitId: string;
+  lecturerId: string;
+  venueName: string;
+  buildingName: string;
+  /** ISO weekday: 1=Mon..7=Sun */
+  dayOfWeek: number[];
+  startHour: number;
+  endHour: number;
+  attendanceMode: AttendanceMode;
+  approvalStatus: ScheduleApprovalStatus;
+  submittedBy: string;
+  submittedAt: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+}

@@ -15,6 +15,8 @@ import type {
   CorrectionRecord,
   AdminActivityLogEntry,
   AttendanceMode,
+  ScheduleApprovalStatus,
+  ScheduledClassSubmission,
 } from '../types';
 
 /* ════════════════════════════════════════════════════════════════
@@ -927,4 +929,111 @@ export function getLecturerAbsences(lecturerId: string): LecturerAbsence[] {
       return { classInstanceId: ci.id, courseCode: course.code, courseTitle: course.title, instanceDate: ci.instanceDate, venueName: ci.venueName };
     })
     .sort((a, b) => new Date(b.instanceDate).getTime() - new Date(a.instanceDate).getTime());
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Scheduled class submissions — the timetable-authoring layer above
+   class_instances (P1.8). One 'approved' submission per live course,
+   mirroring the weekday/time-slot already baked into class_instances
+   via courseSpecs, so the grid and the actual materialised classes
+   never disagree — plus a few pending/rejected submissions so the
+   HOD approval queue has real content rather than an empty state.
+   ════════════════════════════════════════════════════════════════ */
+
+export const scheduledClassSubmissions: ScheduledClassSubmission[] = [];
+let scsSeq = 0;
+
+function addScheduleSubmission(input: {
+  courseCode: string;
+  lecturerId: string;
+  dayOfWeek: number[];
+  startHour: number;
+  endHour: number;
+  mode?: AttendanceMode;
+  approvalStatus: ScheduleApprovalStatus;
+  submittedBy: string;
+  submittedDaysAgo: number;
+  approvedBy?: string;
+  approvedDaysAgo?: number;
+  rejectionReason?: string;
+}) {
+  const course = courseUnits.find((c) => c.code === input.courseCode)!;
+  const spec = courseSpecs.find((s) => s.code === input.courseCode)!;
+  const { building, venue } = venueFor(spec.departmentId);
+  scsSeq++;
+  scheduledClassSubmissions.push({
+    id: `scs-${scsSeq}`,
+    courseUnitId: course.id,
+    lecturerId: input.lecturerId,
+    venueName: venue,
+    buildingName: building,
+    dayOfWeek: input.dayOfWeek,
+    startHour: input.startHour,
+    endHour: input.endHour,
+    attendanceMode: input.mode ?? 'window',
+    approvalStatus: input.approvalStatus,
+    submittedBy: input.submittedBy,
+    submittedAt: new Date(NOW.getTime() - input.submittedDaysAgo * 86_400_000).toISOString(),
+    approvedBy: input.approvedBy ?? null,
+    approvedAt: input.approvedDaysAgo !== undefined ? new Date(NOW.getTime() - input.approvedDaysAgo * 86_400_000).toISOString() : null,
+    rejectionReason: input.rejectionReason ?? null,
+  });
+}
+
+for (const spec of courseSpecs) {
+  const dept = departments.find((d) => d.id === spec.departmentId)!;
+  addScheduleSubmission({
+    courseCode: spec.code,
+    lecturerId: spec.leadId,
+    dayOfWeek: spec.weekdays,
+    startHour: spec.timeSlot[0],
+    endHour: spec.timeSlot[1],
+    mode: spec.mode,
+    approvalStatus: 'approved',
+    submittedBy: spec.leadId,
+    submittedDaysAgo: 95,
+    approvedBy: dept.hodId ?? undefined,
+    approvedDaysAgo: 92,
+  });
+}
+
+// A couple of pending proposals and one rejection, so the approval
+// queue and its colour-coded states have real content to demo.
+addScheduleSubmission({
+  courseCode: 'CSC305',
+  lecturerId: lecIfeanyi.id,
+  dayOfWeek: [2, 4],
+  startHour: 14,
+  endHour: 16,
+  approvalStatus: 'pending',
+  submittedBy: lecIfeanyi.id,
+  submittedDaysAgo: 2,
+});
+addScheduleSubmission({
+  courseCode: 'ACC301',
+  lecturerId: lecNneka.id,
+  dayOfWeek: [3, 5],
+  startHour: 8,
+  endHour: 10,
+  approvalStatus: 'pending',
+  submittedBy: lecNneka.id,
+  submittedDaysAgo: 1,
+});
+addScheduleSubmission({
+  courseCode: 'MAC201',
+  lecturerId: lecChike.id,
+  dayOfWeek: [3, 5],
+  startHour: 10,
+  endHour: 12,
+  approvalStatus: 'rejected',
+  submittedBy: lecChike.id,
+  submittedDaysAgo: 6,
+  approvedBy: departments.find((d) => d.id === 'dept-mac')?.hodId ?? undefined,
+  approvedDaysAgo: 5,
+  rejectionReason: 'Conflicts with MAC301 in the same venue on Wednesdays — please resubmit with an alternate slot.',
+});
+
+export function getScheduledSubmissionsForDepartment(departmentId: string): ScheduledClassSubmission[] {
+  const courseIds = new Set(courseUnits.filter((c) => c.departmentId === departmentId).map((c) => c.id));
+  return scheduledClassSubmissions.filter((s) => courseIds.has(s.courseUnitId));
 }

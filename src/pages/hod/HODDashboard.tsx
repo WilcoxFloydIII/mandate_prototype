@@ -13,6 +13,7 @@ import { StudentDetailDrawer } from './StudentDetailDrawer';
 import { LecturersPanel } from './LecturersPanel';
 import { LecturerDetailDrawer } from './LecturerDetailDrawer';
 import { ReportsPanel } from './ReportsPanel';
+import { TimetablePanel } from './TimetablePanel';
 
 function HODHome() {
   const userId = useSessionStore((s) => s.currentUserId);
@@ -47,7 +48,7 @@ export function HODDashboard() {
         <Route path="students/:studentId" element={<StudentDetailDrawer />} />
         <Route path="lecturers" element={<LecturersPanel />} />
         <Route path="lecturers/:lecturerId" element={<LecturerDetailDrawer />} />
-        <Route path="timetable" element={<SectionPlaceholder title="Timetable Management" />} />
+        <Route path="timetable" element={<TimetablePanel />} />
         <Route path="reports" element={<ReportsPanel />} />
         <Route path="corrections" element={<CorrectionsPanel />} />
         <Route path="alerts" element={<AlertsPanel />} />

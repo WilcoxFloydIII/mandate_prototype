@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { StudentHome } from './StudentHome';
+import { AtRiskCourses } from './AtRiskCourses';
+import { AttendanceHistory } from './AttendanceHistory';
 import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
 
 export function StudentRoutes() {
@@ -7,8 +9,8 @@ export function StudentRoutes() {
     <Routes>
       <Route index element={<Navigate to="home" replace />} />
       <Route path="home" element={<StudentHome />} />
-      <Route path="at-risk" element={<SectionPlaceholder title="At-Risk Courses" description="Tap a course on Home for now — a dedicated full-list view is next." />} />
-      <Route path="history" element={<SectionPlaceholder title="Attendance History" description="Calendar-grid view arrives in the next build pass." />} />
+      <Route path="at-risk" element={<AtRiskCourses />} />
+      <Route path="history" element={<AttendanceHistory />} />
       <Route path="course/:courseId" element={<SectionPlaceholder title="Course Detail" description="Tap a course on Home to open its detail drawer." />} />
       <Route path="notifications" element={<SectionPlaceholder title="Notifications" />} />
       <Route path="profile" element={<SectionPlaceholder title="Profile" />} />

@@ -7,6 +7,9 @@ import { users, departments, institution, academicSession, currentSemester, admi
 import { KPICard } from '../../components/shared/KPICard';
 import { ActivityLogPanel } from './ActivityLogPanel';
 import { ReportsPanel } from './ReportsPanel';
+import { UsersPanel } from './UsersPanel';
+import { UserDetailDrawer } from './UserDetailDrawer';
+import { TimetablePanel } from './TimetablePanel';
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -74,10 +77,10 @@ export function AdminDashboard() {
       <Routes>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminHome />} />
-        <Route path="users" element={<SectionPlaceholder title="User Management" description="Bulk import and per-user editing arrive in the next build pass." />} />
-        <Route path="users/:userId" element={<SectionPlaceholder title="User Detail" />} />
+        <Route path="users" element={<UsersPanel />} />
+        <Route path="users/:userId" element={<UserDetailDrawer />} />
         <Route path="users/import" element={<SectionPlaceholder title="Bulk Import" />} />
-        <Route path="timetable" element={<SectionPlaceholder title="Timetable Editor" />} />
+        <Route path="timetable" element={<TimetablePanel />} />
         <Route path="courses" element={<SectionPlaceholder title="Courses" />} />
         <Route path="sessions" element={<SectionPlaceholder title="Sessions" description="Academic session lifecycle and Exam Eligibility Lock." />} />
         <Route path="reports" element={<ReportsPanel />} />
