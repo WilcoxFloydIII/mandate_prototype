@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronRight, Radio, Users2 } from 'lucide-react';
 import { useSessionStore } from '../../store/useSessionStore';
@@ -27,23 +28,38 @@ export function LecturerHome() {
             <p className="text-xs text-zinc-400">{department?.shortName} · Lecturer</p>
             <h1 className="mt-0.5 text-xl font-semibold">{lecturer.fullName}</h1>
           </div>
-          <button className="relative rounded-full bg-white/10 p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400" aria-label="Notifications">
+          <Link 
+  to="/lecturer/notifications" 
+  className="relative rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors block"
+  aria-label="Notifications"
+>
+
             <Bell className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </Link>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-white/5 p-3">
+          <Link
+            to="/lecturer/courses"
+            className="rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors block"
+            aria-label={`Courses taught: ${courses.length}. View all courses`}
+          >
             <p className="text-[11px] text-zinc-400">Courses taught</p>
             <p className="mt-0.5 text-lg font-semibold tabular-nums">{courses.length}</p>
-          </div>
-          <div className="rounded-xl bg-white/5 p-3">
+          </Link>
+          <button
+            type="button"
+            onClick={() => document.getElementById('active-class-section')?.scrollIntoView({ behavior: 'smooth' })}
+            className="rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors text-left w-full block"
+            aria-label={`Classes today: ${todayClasses.length}. Jump to today's schedule`}
+          >
             <p className="text-[11px] text-zinc-400">Classes today</p>
             <p className="mt-0.5 text-lg font-semibold tabular-nums">{todayClasses.length}</p>
-          </div>
+          </button>
+
         </div>
       </div>
 
-      <div className="-mt-4 space-y-4 px-4">
+      <div id="active-class-section" className="mt-4 space-y-4 px-4">
         {nowClass && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">{nowClass.status === 'active' ? 'Now' : 'Up next'}</p>
@@ -75,7 +91,13 @@ export function LecturerHome() {
               const snapshot = getCourseComplianceSnapshot(course.id);
               const isCoTaught = course.lecturerIds.length > 1;
               return (
-                <div key={course.id} className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
+                <Link 
+  key={course.id} 
+  to={`/lecturer/courses?id=${course.id}`}
+  className="flex items-center justify-between rounded-xl bg-zinc-50 dark:bg-zinc-900 px-3 py-2.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors block"
+  aria-label={`View ${course.code} details`}
+>
+
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
                       {course.code}
@@ -97,7 +119,7 @@ export function LecturerHome() {
                     )}
                     <ChevronRight className="h-4 w-4 text-zinc-300 dark:text-zinc-600" aria-hidden="true" />
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

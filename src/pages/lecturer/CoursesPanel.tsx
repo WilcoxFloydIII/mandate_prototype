@@ -1,13 +1,23 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Users2 } from 'lucide-react';
 import { useSessionStore } from '../../store/useSessionStore';
 import { getUserById, getCourseUnitsForLecturer, getCourseComplianceSnapshot } from '../../data/mockData';
 
 export function CoursesPanel() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedId = searchParams.get('id');
   const userId = useSessionStore((s) => s.currentUserId);
   const lecturer = getUserById(userId)!;
   const courses = getCourseUnitsForLecturer(lecturer.id);
+  const selectedRef = useRef<HTMLLIElement | null>(null);
+
+  useEffect(() => {
+    if (selectedId && selectedRef.current) {
+      selectedRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [selectedId]);
 
   return (
     <div className="px-4 py-4">
@@ -33,8 +43,18 @@ export function CoursesPanel() {
               .filter((id) => id !== lecturer.id)
               .map((id) => getUserById(id))
               .filter((u): u is NonNullable<typeof u> => Boolean(u));
+            const isSelected = selectedId === course.id;
             return (
-              <li key={course.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <li
+                key={course.id}
+                ref={isSelected ? selectedRef : undefined}
+                aria-current={isSelected ? 'true' : undefined}
+                className={`rounded-2xl border p-4 shadow-sm transition-colors ${
+                  isSelected
+                    ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-400 dark:border-blue-500/60 dark:bg-blue-500/10 dark:ring-blue-500/60'
+                    : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
+                }`}
+              >
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-zinc-900 dark:text-white">{course.code}</p>
