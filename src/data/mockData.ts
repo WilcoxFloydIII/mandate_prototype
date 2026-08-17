@@ -717,6 +717,68 @@ export function calculateCourseStats(
 }
 
 /* ════════════════════════════════════════════════════════════════
+   calculateLecturerCourseStats — the lecturer-side equivalent of
+   calculateCourseStats, for "did this lecturer show up to their own
+   class instances for this course". Scoped to class instances where
+   ci.lecturerId === lecturerId — i.e. sessions this lecturer was
+   actually assigned to teach, not a co-lecturer's sessions on the
+   same course — matching the scoping getLecturerAbsences already
+   uses. In this dataset a lecturer's own attendance record is always
+   either 'qr_chain_verified' + 'verified' (present) or absent (no
+   record), but this reads the real record/status rather than
+   assuming that, so it stays correct if that ever changes.
+   ════════════════════════════════════════════════════════════════ */
+
+export interface LecturerCourseSessionEntry {
+  instance: ClassInstance;
+  record: AttendanceRecord | undefined;
+  status: SessionStatus;
+  present: boolean;
+}
+
+export interface LecturerCourseStats {
+  classesHeld: number;
+  attendedClasses: number;
+  attendancePct: number;
+  thresholdPct: number;
+  absencesCount: number;
+  meetsThreshold: boolean;
+  sessions: LecturerCourseSessionEntry[]; // newest first, one entry per class instance this lecturer taught
+}
+
+export function calculateLecturerCourseStats(
+  lecturerId: string,
+  courseUnitId: string,
+  records: AttendanceRecord[] = attendanceRecords,
+  thresholdPct: number = institution.defaultThresholdPct
+): LecturerCourseStats {
+  const instances = classInstances
+    .filter((ci) => ci.courseUnitId === courseUnitId && ci.lecturerId === lecturerId && (ci.status === 'completed' || ci.status === 'active'))
+    .sort((a, b) => new Date(b.classStartAt).getTime() - new Date(a.classStartAt).getTime());
+
+  const sessions: LecturerCourseSessionEntry[] = instances.map((instance) => {
+    const record = records.find((r) => r.classInstanceId === instance.id && r.userId === lecturerId && r.userRoleAtEvent === 'lecturer');
+    const status = sessionStatusOf(record);
+    return { instance, record, status, present: status === 'verified' };
+  });
+
+  const classesHeld = sessions.length;
+  const attendedClasses = sessions.filter((s) => s.present).length;
+  const attendancePct = classesHeld > 0 ? Math.round((attendedClasses / classesHeld) * 1000) / 10 : 0;
+
+  return {
+    classesHeld,
+    attendedClasses,
+    attendancePct,
+    thresholdPct,
+    absencesCount: classesHeld - attendedClasses,
+    meetsThreshold: classesHeld > 0 && attendancePct >= thresholdPct,
+    sessions,
+  };
+}
+
+
+/* ════════════════════════════════════════════════════════════════
    Threshold summaries (student + lecturer)
    ════════════════════════════════════════════════════════════════ */
 

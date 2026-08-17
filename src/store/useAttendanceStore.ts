@@ -7,6 +7,10 @@ let correctionSeq = seedCorrections.length;
 interface AttendanceState {
   records: AttendanceRecord[];
   corrections: CorrectionRecord[];
+  /** Exam Eligibility Lock (P2 Part 2) — freezes attendance summaries for the current semester. Deliberately no unlock action. */
+  examEligibilityLocked: boolean;
+  examEligibilityLockedAt: string | null;
+  examEligibilityLockedBy: string | null;
   addRecord: (record: AttendanceRecord) => void;
   setVerificationStatus: (recordId: string, status: VerificationStatus) => void;
   submitCorrection: (input: {
@@ -17,11 +21,15 @@ interface AttendanceState {
     documentedReason: string;
     newStatus?: VerificationStatus;
   }) => void;
+  lockExamEligibility: (actorId: string) => void;
 }
 
 export const useAttendanceStore = create<AttendanceState>((set) => ({
   records: seedRecords,
   corrections: seedCorrections,
+  examEligibilityLocked: false,
+  examEligibilityLockedAt: null,
+  examEligibilityLockedBy: null,
 
   addRecord: (record) => set((s) => ({ records: [record, ...s.records] })),
 
@@ -50,4 +58,11 @@ export const useAttendanceStore = create<AttendanceState>((set) => ({
           : s.records,
     }));
   },
+
+  lockExamEligibility: (actorId) =>
+    set(() => ({
+      examEligibilityLocked: true,
+      examEligibilityLockedAt: new Date().toISOString(),
+      examEligibilityLockedBy: actorId,
+    })),
 }));

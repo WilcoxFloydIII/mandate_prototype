@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Building2, Users, AlertTriangle, CalendarClock } from 'lucide-react';
 import { DesktopShell } from '../../components/layout/DesktopShell';
-import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
 import { DEAN_NAV } from '../../config/navigation';
 import { useSessionStore } from '../../store/useSessionStore';
 import { getUserById, getFacultyById, getFacultySnapshot, getDepartmentSnapshot, getDepartmentComparison, getDepartmentById, departments } from '../../data/mockData';
@@ -10,6 +9,9 @@ import { KPICard } from '../../components/shared/KPICard';
 import { ComparisonChart } from '../../components/shared/ComparisonChart';
 import { DepartmentSnapshotModal } from '../../components/shared/DepartmentSnapshotModal';
 import { ReportsPanel } from './ReportsPanel';
+import { DepartmentDetail } from './DepartmentDetail';
+import { ScheduleApprovalsView } from './ScheduleApprovalsView';
+import { SettingsPanel } from './SettingsPanel';
 import type { Department } from '../../types';
 
 function DeanHome() {
@@ -44,10 +46,10 @@ function DeanHome() {
 }
 
 function DepartmentsList() {
+  const navigate = useNavigate();
   const userId = useSessionStore((s) => s.currentUserId);
   const dean = getUserById(userId)!;
   const deptList = departments.filter((d) => d.facultyId === dean.facultyId);
-  const [selected, setSelected] = useState<Department | null>(null);
 
   return (
     <div>
@@ -58,7 +60,7 @@ function DepartmentsList() {
             const pct = getDepartmentSnapshot(d.id).avgAttendancePct;
             return (
               <li key={d.id}>
-                <button onClick={() => setSelected(d)} className="flex w-full items-center justify-between px-5 py-3.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                <button onClick={() => navigate(`/dean/departments/${d.id}`)} className="flex w-full items-center justify-between px-5 py-3.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800">
                   <span className="text-sm font-medium text-zinc-900 dark:text-white">{d.name}</span>
                   <span className={`text-sm font-semibold ${pct >= 75 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{pct}%</span>
                 </button>
@@ -67,7 +69,6 @@ function DepartmentsList() {
           })}
         </ul>
       </div>
-      <DepartmentSnapshotModal department={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
@@ -79,10 +80,10 @@ export function DeanDashboard() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DeanHome />} />
         <Route path="departments" element={<DepartmentsList />} />
-        <Route path="departments/:deptId" element={<SectionPlaceholder title="Department Detail" description="Click a department from the list — the full read-only HOD view is next." />} />
+        <Route path="departments/:deptId" element={<DepartmentDetail />} />
         <Route path="reports" element={<ReportsPanel />} />
-        <Route path="schedule-approvals" element={<SectionPlaceholder title="Schedule Approvals" description="View only — approvals are managed at department level." />} />
-        <Route path="settings" element={<SectionPlaceholder title="Settings" />} />
+        <Route path="schedule-approvals" element={<ScheduleApprovalsView />} />
+        <Route path="settings" element={<SettingsPanel />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
     </DesktopShell>

@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Users, Building2, CalendarCheck2, ShieldCheck, ArrowRight } from 'lucide-react';
 import { DesktopShell } from '../../components/layout/DesktopShell';
-import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
 import { ADMIN_NAV } from '../../config/navigation';
 import { users, departments, institution, academicSession, currentSemester, adminActivityLog, getUserById, getInstitutionSnapshot } from '../../data/mockData';
 import { KPICard } from '../../components/shared/KPICard';
@@ -10,6 +9,11 @@ import { ReportsPanel } from './ReportsPanel';
 import { UsersPanel } from './UsersPanel';
 import { UserDetailDrawer } from './UserDetailDrawer';
 import { TimetablePanel } from './TimetablePanel';
+import { CoursesPanel } from './CoursesPanel';
+import { BulkImportPanel } from './BulkImportPanel';
+import { SessionsPanel } from './SessionsPanel';
+import { HierarchyPanel } from './HierarchyPanel';
+import { SettingsPanel } from './SettingsPanel';
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -79,13 +83,14 @@ export function AdminDashboard() {
         <Route path="dashboard" element={<AdminHome />} />
         <Route path="users" element={<UsersPanel />} />
         <Route path="users/:userId" element={<UserDetailDrawer />} />
-        <Route path="users/import" element={<SectionPlaceholder title="Bulk Import" />} />
+        <Route path="users/import" element={<BulkImportPanel />} />
         <Route path="timetable" element={<TimetablePanel />} />
-        <Route path="courses" element={<SectionPlaceholder title="Courses" />} />
-        <Route path="sessions" element={<SectionPlaceholder title="Sessions" description="Academic session lifecycle and Exam Eligibility Lock." />} />
+        <Route path="courses" element={<CoursesPanel />} />
+        <Route path="hierarchy" element={<HierarchyPanel />} />
+        <Route path="sessions" element={<SessionsPanel />} />
         <Route path="reports" element={<ReportsPanel />} />
         <Route path="activity-log" element={<ActivityLogPanel />} />
-        <Route path="settings" element={<SectionPlaceholder title="Settings" />} />
+        <Route path="settings" element={<SettingsPanel />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
     </DesktopShell>

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CalendarX2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarX2, TrendingUp, ChevronRight } from 'lucide-react';
 import {
   getUserById,
   getDepartmentById,
@@ -7,13 +8,19 @@ import {
   getLecturerSummariesForLecturer,
   getCourseUnitById,
   getLecturerAbsences,
+  calculateLecturerCourseStats,
 } from '../../data/mockData';
 import { KPICard } from '../../components/shared/KPICard';
+import { Modal } from '../../components/shared/Modal';
+import { presenceMethodLabel } from '../../lib/formatters';
+import type { CourseUnit } from '../../types';
 
 export function LecturerDetailDrawer() {
   const { lecturerId } = useParams<{ lecturerId: string }>();
   const navigate = useNavigate();
   const lecturer = lecturerId ? getUserById(lecturerId) : undefined;
+
+  const [historyCourse, setHistoryCourse] = useState<CourseUnit | null>(null);
 
   if (!lecturer || lecturer.role !== 'lecturer') {
     return <Navigate to="/hod/lecturers" replace />;
@@ -80,18 +87,29 @@ export function LecturerDetailDrawer() {
                     {summary.attendedClasses}/{summary.totalClasses} classes held
                   </p>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    summary.meetsThreshold
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                      : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
-                  }`}
-                >
-                  {summary.attendancePct}%
-                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      summary.meetsThreshold
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                    }`}
+                  >
+                    {summary.attendancePct}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryCourse(course)}
+                    className="flex items-center gap-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    View Full History
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
               </li>
             );
           })}
+          {summaries.length === 0 && <li className="px-5 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">No courses assigned.</li>}
         </ul>
       </div>
 
@@ -118,6 +136,67 @@ export function LecturerDetailDrawer() {
           </ul>
         )}
       </div>
+
+      <LecturerCourseHistoryModal course={historyCourse} lecturerId={lecturer.id} onClose={() => setHistoryCourse(null)} />
     </div>
+  );
+}
+
+/** The complete chronological session log for one course from the lecturer's own side — every class instance they were assigned to teach, one row each, with date, venue, session mode, and their attendance status (Present/Verified or Absent). Mirrors FullHistoryModal in StudentDetailDrawer.tsx. */
+function LecturerCourseHistoryModal({ course, lecturerId, onClose }: { course: CourseUnit | null; lecturerId: string; onClose: () => void }) {
+  const stats = course ? calculateLecturerCourseStats(lecturerId, course.id) : null;
+
+  return (
+    <Modal open={!!course} onClose={onClose} title={course ? `${course.code} · ${course.title} · Full History` : undefined}>
+      {course && stats && (
+        <div>
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white">{stats.classesHeld}</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Classes held</p>
+            </div>
+            <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white">{stats.attendancePct}%</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Attendance rate</p>
+            </div>
+            <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
+              <p className={`text-lg font-semibold ${stats.absencesCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {stats.absencesCount}
+              </p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Absences</p>
+            </div>
+          </div>
+
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+            All sessions ({stats.classesHeld})
+          </p>
+          <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
+            {stats.sessions.map(({ instance, record, present }) => (
+              <li key={instance.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+                    {new Date(instance.classStartAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    {instance.venueName}
+                    {record && ` · ${presenceMethodLabel(record.presenceMethod)}`}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    present
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                      : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
+                  }`}
+                >
+                  {present ? 'Present / Verified' : 'Absent'}
+                </span>
+              </li>
+            ))}
+            {stats.sessions.length === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">No sessions recorded yet.</p>}
+          </ul>
+        </div>
+      )}
+    </Modal>
   );
 }

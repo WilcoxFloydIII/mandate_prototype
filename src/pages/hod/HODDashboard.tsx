@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Users, GraduationCap, AlertTriangle, CalendarClock } from 'lucide-react';
 import { DesktopShell } from '../../components/layout/DesktopShell';
-import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
+import { SettingsPanel } from './SettingsPanel';
 import { HOD_NAV } from '../../config/navigation';
 import { useSessionStore } from '../../store/useSessionStore';
 import { getUserById, getDepartmentById, getDepartmentSnapshot } from '../../data/mockData';
@@ -52,7 +52,7 @@ export function HODDashboard() {
         <Route path="reports" element={<ReportsPanel />} />
         <Route path="corrections" element={<CorrectionsPanel />} />
         <Route path="alerts" element={<AlertsPanel />} />
-        <Route path="settings" element={<SectionPlaceholder title="Settings" />} />
+        <Route path="settings" element={<SettingsPanel />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
     </DesktopShell>
