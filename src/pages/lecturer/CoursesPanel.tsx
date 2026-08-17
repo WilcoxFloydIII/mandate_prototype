@@ -11,6 +11,7 @@ import {
   getThresholdSummariesForStudent,
   getClassInstancesForCourse,
   getAttendanceRecordsForClassInstance,
+  getDepartmentById,
 } from '../../data/mockData';
 import { Drawer } from '../../components/shared/Drawer';
 import { StatusPill, type Status } from '../../components/shared/StatusPill';
@@ -232,6 +233,8 @@ function StudentCourseDrawer({
     ? getThresholdSummariesForStudent(student.id).find((s) => s.courseUnitId === course.id)
     : undefined;
 
+  const department = student?.departmentId ? getDepartmentById(student.departmentId) : undefined;
+
   const sessions = useMemo(() => {
     if (!student) return [];
     const instances = getClassInstancesForCourse(course.id);
@@ -249,65 +252,69 @@ function StudentCourseDrawer({
   return (
     <Drawer open={open} onClose={onClose} title={student?.fullName} subtitle={student ? `${student.institutionalId} · ${course.code}` : undefined}>
       {student && (
-        <>
-          <div className="mb-5 flex flex-col items-center text-center">
-            <span
-              className="mb-3 flex h-16 w-16 items-center justify-center rounded-full text-xl font-semibold text-white"
-              style={{ backgroundColor: student.avatarColor }}
-            >
-              {student.initials}
-            </span>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{student.fullName}</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {student.institutionalId} · {student.level}L
-            </p>
-          </div>
-
-          {summary && (
-            <div className="mb-5 grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{summary.attendancePct}%</p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">of {summary.thresholdPct}% threshold</p>
-              </div>
-              <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">
-                  {summary.attendedClasses}/{summary.totalClasses}
+        <div>
+          <div className="rounded-2xl bg-zinc-950 px-4 pb-5 pt-4 text-white">
+            <div className="flex items-center gap-3">
+              <span
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-white ring-2 ring-white/10"
+                style={{ backgroundColor: student.avatarColor }}
+              >
+                {student.initials}
+              </span>
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold">{student.fullName}</h2>
+                <p className="truncate text-xs text-zinc-400">
+                  {student.institutionalId} · {student.level}L{department ? ` · ${department.shortName}` : ''}
                 </p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Classes attended</p>
-              </div>
-              <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <p className={`text-lg font-semibold ${isAtRisk ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {isAtRisk ? 'Active' : 'Clear'}
-                </p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">At-risk status</p>
               </div>
             </div>
-          )}
 
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Recent sessions</p>
-          <ul className="space-y-2">
-            {sessions.map(({ instance, record }) => (
-              <li key={instance.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-                    {new Date(instance.classStartAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </p>
-                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                    {instance.venueName} {record && `· ${METHOD_LABEL[record.presenceMethod]}`}
-                  </p>
+            {summary && (
+              <div className="mt-4 grid grid-cols-3 gap-2.5">
+                <div className="rounded-xl bg-white/5 p-3 text-center">
+                  <p className="text-lg font-semibold tabular-nums">{summary.attendancePct}%</p>
+                  <p className="mt-0.5 text-[10px] leading-tight text-zinc-400">of {summary.thresholdPct}% threshold</p>
                 </div>
-                {record ? (
-                  <StatusPill status={pillStatus(record.verificationStatus)} />
-                ) : (
-                  <span className="rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:border-rose-500/40 dark:text-rose-400">
-                    Absent
-                  </span>
-                )}
-              </li>
-            ))}
-            {sessions.length === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">No sessions recorded yet.</p>}
-          </ul>
-        </>
+                <div className="rounded-xl bg-white/5 p-3 text-center">
+                  <p className="text-lg font-semibold tabular-nums">
+                    {summary.attendedClasses}/{summary.totalClasses}
+                  </p>
+                  <p className="mt-0.5 text-[10px] leading-tight text-zinc-400">classes attended</p>
+                </div>
+                <div className="rounded-xl bg-white/5 p-3 text-center">
+                  <p className={`text-lg font-semibold ${isAtRisk ? 'text-amber-400' : 'text-emerald-400'}`}>{isAtRisk ? 'Active' : 'Clear'}</p>
+                  <p className="mt-0.5 text-[10px] leading-tight text-zinc-400">at-risk status</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Recent sessions</p>
+            <ul className="space-y-2">
+              {sessions.map(({ instance, record }) => (
+                <li key={instance.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+                      {new Date(instance.classStartAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </p>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {instance.venueName} {record && `· ${METHOD_LABEL[record.presenceMethod]}`}
+                    </p>
+                  </div>
+                  {record ? (
+                    <StatusPill status={pillStatus(record.verificationStatus)} />
+                  ) : (
+                    <span className="shrink-0 rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:border-rose-500/40 dark:text-rose-400">
+                      Absent
+                    </span>
+                  )}
+                </li>
+              ))}
+              {sessions.length === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">No sessions recorded yet.</p>}
+            </ul>
+          </div>
+        </div>
       )}
     </Drawer>
   );
