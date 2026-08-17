@@ -16,6 +16,7 @@ export function LecturerRoutes() {
       <Route path="session/:classId/roster" element={<BroadcastRoster />} />
       <Route path="history" element={<AttendanceHistory />} />
       <Route path="courses" element={<CoursesPanel />} />
+      <Route path="schedule" element={<SubmitSchedule />} />
       <Route path="schedule/submit" element={<SubmitSchedule />} />
       <Route path="notifications" element={<NotificationsPanel />} />
       <Route path="profile" element={<ProfilePanel />} />

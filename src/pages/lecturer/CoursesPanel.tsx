@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Users2 } from 'lucide-react';
 import { useSessionStore } from '../../store/useSessionStore';
-import { getUserById, getCourseUnitsForLecturer, getCourseComplianceSnapshot } from '../../data/mockData';
+import { getUserById, getCourseUnitsForLecturer, getCourseComplianceSnapshot, getEnrolledStudents } from '../../data/mockData';
 
 export function CoursesPanel() {
   const navigate = useNavigate();
@@ -12,6 +12,11 @@ export function CoursesPanel() {
   const lecturer = getUserById(userId)!;
   const courses = getCourseUnitsForLecturer(lecturer.id);
   const selectedRef = useRef<HTMLLIElement | null>(null);
+
+  const selectedRoster = useMemo(
+    () => (selectedId ? getEnrolledStudents(selectedId) : []),
+    [selectedId]
+  );
 
   useEffect(() => {
     if (selectedId && selectedRef.current) {
@@ -81,6 +86,28 @@ export function CoursesPanel() {
                     </span>
                   )}
                 </div>
+
+                {isSelected && (
+                  <div className="mt-3 border-t border-blue-200 pt-3 dark:border-blue-500/30">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+                      Enrolled roster ({selectedRoster.length})
+                    </p>
+                    {selectedRoster.length === 0 ? (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">No students enrolled yet.</p>
+                    ) : (
+                      <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                        {selectedRoster.map((student) => (
+                          <li
+                            key={student.id}
+                            className="flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5 text-xs dark:bg-zinc-900"
+                          >
+                            <span className="truncate text-zinc-700 dark:text-zinc-300">{student.fullName}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}

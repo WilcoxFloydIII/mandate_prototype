@@ -43,12 +43,12 @@ export function StudentHome() {
     <div className="pb-10">
       <div className="bg-zinc-950 px-5 pb-8 pt-6 text-white">
         <div className="flex items-center justify-between">
-          <div>
+          <Link to="/student/profile" className="rounded-lg transition-opacity hover:opacity-80" aria-label="View profile">
             <p className="text-xs text-zinc-400">
               {department?.shortName} · {student.level} Level
             </p>
             <h1 className="mt-0.5 text-xl font-semibold">{student.fullName}</h1>
-          </div>
+          </Link>
           <Link 
   to="/student/notifications" 
   className="relative rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors block"
@@ -116,7 +116,16 @@ export function StudentHome() {
         )}
 
         <div id="enrolled-courses" className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Your courses</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Your courses</p>
+            <Link
+              to="/student/history"
+              className="flex items-center gap-0.5 text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              aria-label="View full attendance history"
+            >
+              History <ChevronRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </div>
           <div className="mt-3 space-y-2.5">
             {summaries.map((s) => {
               const course = courses.find((c) => c.id === s.courseUnitId);

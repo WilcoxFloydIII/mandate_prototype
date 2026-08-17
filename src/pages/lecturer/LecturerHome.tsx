@@ -24,10 +24,10 @@ export function LecturerHome() {
     <div className="pb-10">
       <div className="bg-zinc-950 px-5 pb-8 pt-6 text-white">
         <div className="flex items-center justify-between">
-          <div>
+          <Link to="/lecturer/profile" className="rounded-lg transition-opacity hover:opacity-80" aria-label="View profile">
             <p className="text-xs text-zinc-400">{department?.shortName} · Lecturer</p>
             <h1 className="mt-0.5 text-xl font-semibold">{lecturer.fullName}</h1>
-          </div>
+          </Link>
           <Link 
   to="/lecturer/notifications" 
   className="relative rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors block"
@@ -46,15 +46,14 @@ export function LecturerHome() {
             <p className="text-[11px] text-zinc-400">Courses taught</p>
             <p className="mt-0.5 text-lg font-semibold tabular-nums">{courses.length}</p>
           </Link>
-          <button
-            type="button"
-            onClick={() => document.getElementById('active-class-section')?.scrollIntoView({ behavior: 'smooth' })}
-            className="rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors text-left w-full block"
-            aria-label={`Classes today: ${todayClasses.length}. Jump to today's schedule`}
+          <Link
+            to="/lecturer/schedule"
+            className="rounded-xl bg-white/5 p-3 hover:bg-white/10 transition-colors block"
+            aria-label={`Classes today: ${todayClasses.length}. View schedule`}
           >
             <p className="text-[11px] text-zinc-400">Classes today</p>
             <p className="mt-0.5 text-lg font-semibold tabular-nums">{todayClasses.length}</p>
-          </button>
+          </Link>
 
         </div>
       </div>
@@ -85,7 +84,16 @@ export function LecturerHome() {
         )}
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">My courses</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">My courses</p>
+            <Link
+              to="/lecturer/history"
+              className="flex items-center gap-0.5 text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              aria-label="View attendance history"
+            >
+              History <ChevronRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </div>
           <div className="mt-3 space-y-2.5">
             {courses.map((course) => {
               const snapshot = getCourseComplianceSnapshot(course.id);
