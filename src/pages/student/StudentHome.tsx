@@ -19,8 +19,12 @@ import { CourseDetailDrawer } from './CourseDetailDrawer';
 import type { AttendanceThresholdSummary, CourseUnit } from '../../types';
 
 function statusFor(summary: AttendanceThresholdSummary): Status {
-  if (!summary.isEligible) return 'at-risk';
-  return summary.attendancePct - summary.thresholdPct <= 10 ? 'at-risk' : 'on-track';
+  // At-risk is strictly "below the NUC threshold" — never computed from a
+  // hardcoded flag on the mock object, and never "close to threshold".
+  // summary.isEligible already encodes totalClasses > 0 && attendancePct >= thresholdPct,
+  // so this is equivalent to attendancePct < thresholdPct.
+  const isAtRisk = summary.attendancePct < summary.thresholdPct;
+  return isAtRisk ? 'at-risk' : 'on-track';
 }
 
 export function StudentHome() {
