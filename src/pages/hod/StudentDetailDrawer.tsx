@@ -154,7 +154,6 @@ export function StudentDetailDrawer() {
 
 /** A quick cross-course glance — most recent sessions first, capped for readability. Full detail per course lives in FullHistoryModal via "View Full History". */
 function RecentSessionsList({
-  studentId,
   courseStats,
 }: {
   studentId: string;
