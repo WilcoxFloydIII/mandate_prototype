@@ -17,6 +17,8 @@ import type {
   AttendanceMode,
   ScheduleApprovalStatus,
   ScheduledClassSubmission,
+  NotificationCategory,
+  NotificationItem,
 } from '../types';
 
 /* ════════════════════════════════════════════════════════════════
@@ -1036,4 +1038,109 @@ addScheduleSubmission({
 export function getScheduledSubmissionsForDepartment(departmentId: string): ScheduledClassSubmission[] {
   const courseIds = new Set(courseUnits.filter((c) => c.departmentId === departmentId).map((c) => c.id));
   return scheduledClassSubmissions.filter((s) => courseIds.has(s.courseUnitId));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Notifications (P2 Part 1) — illustrative copy, but every item is
+   derived from a real record already computed above (at-risk
+   summaries, unverified check-ins, schedule submissions, lecturer
+   absences), so a notification's text never disagrees with what the
+   rest of the demo already shows that user.
+   ════════════════════════════════════════════════════════════════ */
+
+export const notifications: NotificationItem[] = [];
+let notifSeq = 0;
+
+function addNotification(input: {
+  userId: string;
+  title: string;
+  body: string;
+  category: NotificationCategory;
+  daysAgo: number;
+  read?: boolean;
+}) {
+  notifSeq++;
+  notifications.push({
+    id: `notif-${notifSeq}`,
+    userId: input.userId,
+    title: input.title,
+    body: input.body,
+    category: input.category,
+    createdAt: new Date(NOW.getTime() - input.daysAgo * 86_400_000 - notifSeq * 60_000).toISOString(),
+    read: input.read ?? false,
+  });
+}
+
+// Student notifications — real at-risk courses and real unverified check-ins.
+for (const student of getUsersByRole('student')) {
+  for (const s of getAtRiskSummariesForStudent(student.id).slice(0, 2)) {
+    const course = getCourseUnitById(s.courseUnitId);
+    if (!course) continue;
+    addNotification({
+      userId: student.id,
+      title: `You're now at risk in ${course.code}`,
+      body: `Your attendance in ${course.title} is ${s.attendancePct}%, below the ${s.thresholdPct}% threshold.`,
+      category: 'attendance',
+      daysAgo: 1,
+    });
+  }
+  const unverified = getAttendanceRecordsForStudent(student.id).filter((r) => r.verificationStatus === 'unverified').slice(0, 1);
+  for (const record of unverified) {
+    const instance = getClassInstanceById(record.classInstanceId);
+    const course = instance ? getCourseUnitById(instance.courseUnitId) : undefined;
+    addNotification({
+      userId: student.id,
+      title: 'Check-in needs confirmation',
+      body: `Your check-in for ${course?.code ?? 'a course'} needs lecturer confirmation.`,
+      category: 'attendance',
+      daysAgo: 0,
+    });
+  }
+}
+addNotification({
+  userId: heroStudent.id,
+  title: 'Timetable update',
+  body: `${getCourseUnitById('course-csc301')?.code ?? 'CSC301'} moved venue — check your updated timetable.`,
+  category: 'timetable',
+  daysAgo: 3,
+  read: true,
+});
+
+// Lecturer notifications — real schedule-submission outcomes and real absence flags.
+for (const lecturer of getUsersByRole('lecturer')) {
+  const ownSubmissions = scheduledClassSubmissions.filter((s) => s.submittedBy === lecturer.id);
+  for (const s of ownSubmissions) {
+    const course = getCourseUnitById(s.courseUnitId);
+    if (!course) continue;
+    if (s.approvalStatus === 'pending') {
+      addNotification({
+        userId: lecturer.id,
+        title: 'Schedule submission pending',
+        body: `Your proposed slot for ${course.code} is awaiting HOD approval.`,
+        category: 'timetable',
+        daysAgo: 1,
+      });
+    } else if (s.approvalStatus === 'rejected') {
+      addNotification({
+        userId: lecturer.id,
+        title: 'Schedule submission rejected',
+        body: `${course.code}: ${s.rejectionReason ?? 'No reason provided.'}`,
+        category: 'timetable',
+        daysAgo: 4,
+      });
+    }
+  }
+  for (const a of getLecturerAbsences(lecturer.id).slice(0, 1)) {
+    addNotification({
+      userId: lecturer.id,
+      title: 'Missing attendance record',
+      body: `No attendance record was detected for ${a.courseCode} on ${a.instanceDate}.`,
+      category: 'attendance',
+      daysAgo: 2,
+    });
+  }
+}
+
+export function getNotificationsForUser(userId: string): NotificationItem[] {
+  return notifications.filter((n) => n.userId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }

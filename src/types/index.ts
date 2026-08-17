@@ -225,3 +225,15 @@ export interface ScheduledClassSubmission {
   approvedAt: string | null;
   rejectionReason: string | null;
 }
+
+export type NotificationCategory = 'attendance' | 'timetable' | 'correction' | 'system';
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  category: NotificationCategory;
+  createdAt: string;
+  read: boolean;
+}

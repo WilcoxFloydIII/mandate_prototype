@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Bell, ChevronRight, QrCode } from 'lucide-react';
 import { useSessionStore } from '../../store/useSessionStore';
@@ -81,12 +82,20 @@ export function StudentHome() {
                 (alreadyCheckedIn ? (
                   <StatusPill status="verified" />
                 ) : (
-                  <button
-                    onClick={() => setCheckInOpen(true)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
-                  >
-                    <QrCode className="h-3.5 w-3.5" aria-hidden="true" /> Check In
-                  </button>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <button
+                      onClick={() => setCheckInOpen(true)}
+                      className="flex items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+                    >
+                      <QrCode className="h-3.5 w-3.5" aria-hidden="true" /> Check In
+                    </button>
+                    <Link
+                      to={`/student/checkin/manual/${nowClass.id}`}
+                      className="text-[11px] font-medium text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                    >
+                      Trouble checking in?
+                    </Link>
+                  </div>
                 ))}
             </div>
           </motion.div>
