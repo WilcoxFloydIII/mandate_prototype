@@ -1,13 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useSessionStore } from '../../store/useSessionStore';
 import { getUserById, getAtRiskSummariesForStudent, getCourseUnitById, institution } from '../../data/mockData';
+import { CourseDetailDrawer } from './CourseDetailDrawer';
+import type { CourseUnit } from '../../types';
 
 export function AtRiskCourses() {
   const navigate = useNavigate();
   const userId = useSessionStore((s) => s.currentUserId);
   const student = getUserById(userId)!;
   const summaries = getAtRiskSummariesForStudent(student.id);
+
+  const [selectedCourse, setSelectedCourse] = useState<CourseUnit | null>(null);
 
   return (
     <div className="px-4 py-4">
@@ -31,12 +36,15 @@ export function AtRiskCourses() {
           {summaries.map((s) => {
             const course = getCourseUnitById(s.courseUnitId);
             if (!course) return null;
+            // s.thresholdPct - s.attendancePct is guaranteed positive here because
+            // getAtRiskSummariesForStudent only returns courses where isEligible is
+            // false, i.e. attendancePct < thresholdPct.
             const gap = s.thresholdPct - s.attendancePct;
             return (
               <li key={s.id}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/student/course/${course.id}`)}
+                  onClick={() => setSelectedCourse(course)}
                   className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left shadow-sm transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/10 dark:hover:bg-amber-500/20"
                 >
                   <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -45,7 +53,7 @@ export function AtRiskCourses() {
                       {course.code} · {course.title}
                     </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {s.attendedClasses}/{s.totalClasses} classes attended · {gap.toFixed(0)}pt below threshold
+                      {s.attendedClasses}/{s.totalClasses} classes attended · {gap.toFixed(1)}pt below threshold
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -58,6 +66,8 @@ export function AtRiskCourses() {
           })}
         </ul>
       )}
+
+      <CourseDetailDrawer open={!!selectedCourse} onClose={() => setSelectedCourse(null)} student={student} course={selectedCourse} />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { NotificationsPanel } from './NotificationsPanel';
 import { ProfilePanel } from './ProfilePanel';
 import { Onboarding } from './Onboarding';
 import { ManualCheckIn } from './ManualCheckIn';
-import { SectionPlaceholder } from '../../components/layout/SectionPlaceholder';
 
 export function StudentRoutes() {
   return (
@@ -16,7 +15,10 @@ export function StudentRoutes() {
       <Route path="home" element={<StudentHome />} />
       <Route path="at-risk" element={<AtRiskCourses />} />
       <Route path="history" element={<AttendanceHistory />} />
-      <Route path="course/:courseId" element={<SectionPlaceholder title="Course Detail" description="Tap a course on Home to open its detail drawer." />} />
+      {/* Course detail is a modal (CourseDetailDrawer) opened from Home or At-Risk Courses,
+          not a standalone page — it needs student/course state that only those pages hold.
+          Any deep link here (old bookmarks, notifications, etc.) redirects to Home. */}
+      <Route path="course/:courseId" element={<Navigate to="/student/home" replace />} />
       <Route path="checkin/manual" element={<ManualCheckIn />} />
       <Route path="checkin/manual/:classId" element={<ManualCheckIn />} />
       <Route path="notifications" element={<NotificationsPanel />} />

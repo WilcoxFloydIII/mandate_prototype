@@ -790,7 +790,12 @@ export function getThresholdSummariesForStudent(studentId: string): AttendanceTh
   return attendanceThresholdSummaries.filter((s) => s.studentId === studentId);
 }
 export function getAtRiskSummariesForStudent(studentId: string): AttendanceThresholdSummary[] {
-  return attendanceThresholdSummaries.filter((s) => s.studentId === studentId && (!s.isEligible || s.attendancePct - s.thresholdPct < 10));
+  // At-risk means strictly below the NUC threshold — not merely "close to it".
+  // isEligible is already `totalClasses > 0 && attendancePct >= thresholdPct`,
+  // so a course only counts as at-risk when it has classes recorded and sits
+  // under the threshold. This mirrors coursesAtRisk / atRiskCount / studentsAtRisk
+  // elsewhere in this file, which all key off `!s.isEligible`.
+  return attendanceThresholdSummaries.filter((s) => s.studentId === studentId && s.totalClasses > 0 && !s.isEligible);
 }
 export function getLecturerSummariesForLecturer(lecturerId: string): LecturerAttendanceSummary[] {
   return lecturerAttendanceSummaries.filter((s) => s.lecturerId === lecturerId);
