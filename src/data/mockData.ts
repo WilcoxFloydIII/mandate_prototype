@@ -625,6 +625,98 @@ for (const ci of liveInstances) {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   calculateCourseStats — single source of truth for "a student's
+   attendance in one course", used by every screen that shows a
+   percentage, an attended/total count, an at-risk badge, AND/OR a
+   session-history list for a (student, course) pair. The precomputed
+   attendanceThresholdSummaries below are themselves derived from this
+   function, so there is exactly one place these rules are encoded.
+
+   Rules (NUC compliance):
+   - Only 'verified' or 'confirmed' sessions count as ATTENDED (the
+     numerator). 'unverified' and 'disputed' sessions do NOT count as
+     attended until approved — they still count toward the
+     denominator (they happened; the student's presence just isn't
+     confirmed yet).
+   - A class instance with no attendance record for the student at
+     all is an ABSENCE — also counted in the denominator, never the
+     numerator.
+   - totalClasses is therefore always the number of 'completed' (plus
+     any currently 'active') class instances for the course — NOT the
+     number of attendance records that happen to exist. This is what
+     guarantees the session-history list rendered in any drawer has
+     exactly `totalClasses` rows: one per class instance, every time.
+   - isAtRisk is strictly `attendancePct < thresholdPct`. Being close
+     to the threshold is not "at risk"; only being under it is.
+
+   `records` is passed in rather than read from the module-level
+   `attendanceRecords` array so callers backed by a live store (e.g.
+   useAttendanceStore, which reflects check-ins and corrections made
+   during the session) get numbers and a list that stay in sync with
+   what the student/lecturer/HOD actually see elsewhere in the app.
+   Pass `attendanceRecords` itself (the default) for static/offline use.
+   ════════════════════════════════════════════════════════════════ */
+
+export type SessionStatus = 'verified' | 'unverified' | 'disputed' | 'rejected' | 'absent';
+
+export interface CourseSessionEntry {
+  instance: ClassInstance;
+  record: AttendanceRecord | undefined;
+  status: SessionStatus;
+  countsAsAttended: boolean;
+}
+
+export interface CourseStats {
+  totalClasses: number;
+  attendedClasses: number;
+  attendancePct: number;
+  thresholdPct: number;
+  isAtRisk: boolean;
+  isEligible: boolean;
+  sessions: CourseSessionEntry[]; // newest first, one entry per class instance
+}
+
+function sessionStatusOf(record: AttendanceRecord | undefined): SessionStatus {
+  if (!record) return 'absent';
+  if (record.verificationStatus === 'verified' || record.verificationStatus === 'confirmed') return 'verified';
+  if (record.verificationStatus === 'disputed') return 'disputed';
+  if (record.verificationStatus === 'rejected') return 'rejected';
+  return 'unverified';
+}
+
+export function calculateCourseStats(
+  studentId: string,
+  courseUnitId: string,
+  records: AttendanceRecord[] = attendanceRecords,
+  thresholdPct: number = institution.defaultThresholdPct
+): CourseStats {
+  const instances = classInstances
+    .filter((ci) => ci.courseUnitId === courseUnitId && (ci.status === 'completed' || ci.status === 'active'))
+    .sort((a, b) => new Date(b.classStartAt).getTime() - new Date(a.classStartAt).getTime());
+
+  const sessions: CourseSessionEntry[] = instances.map((instance) => {
+    const record = records.find((r) => r.classInstanceId === instance.id && r.userId === studentId);
+    const status = sessionStatusOf(record);
+    return { instance, record, status, countsAsAttended: status === 'verified' };
+  });
+
+  const totalClasses = sessions.length;
+  const attendedClasses = sessions.filter((s) => s.countsAsAttended).length;
+  const attendancePct = totalClasses > 0 ? Math.round((attendedClasses / totalClasses) * 1000) / 10 : 0;
+  const isEligible = totalClasses > 0 && attendancePct >= thresholdPct;
+
+  return {
+    totalClasses,
+    attendedClasses,
+    attendancePct,
+    thresholdPct,
+    isAtRisk: totalClasses > 0 && attendancePct < thresholdPct,
+    isEligible,
+    sessions,
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════
    Threshold summaries (student + lecturer)
    ════════════════════════════════════════════════════════════════ */
 
@@ -632,17 +724,12 @@ export const attendanceThresholdSummaries: AttendanceThresholdSummary[] = [];
 let atsSeq = 0;
 for (const student of students) {
   for (const enr of courseEnrollments.filter((e) => e.studentId === student.id)) {
-    const instancesForCourse = completedInstances.filter((ci) => ci.courseUnitId === enr.courseUnitId);
-    const totalClasses = instancesForCourse.length;
-    const attendedClasses = attendanceRecords.filter(
-      (ar) => ar.userId === student.id && (ar.verificationStatus === 'verified' || ar.verificationStatus === 'confirmed') && instancesForCourse.some((ci) => ci.id === ar.classInstanceId)
-    ).length;
-    const attendancePct = totalClasses > 0 ? Math.round((attendedClasses / totalClasses) * 1000) / 10 : 0;
+    const stats = calculateCourseStats(student.id, enr.courseUnitId);
     atsSeq++;
     attendanceThresholdSummaries.push({
       id: `ats-${atsSeq}`, studentId: student.id, courseUnitId: enr.courseUnitId, semesterId: currentSemester.id,
-      totalClasses, attendedClasses, attendancePct, thresholdPct: institution.defaultThresholdPct,
-      isEligible: totalClasses > 0 && attendancePct >= institution.defaultThresholdPct,
+      totalClasses: stats.totalClasses, attendedClasses: stats.attendedClasses, attendancePct: stats.attendancePct,
+      thresholdPct: stats.thresholdPct, isEligible: stats.isEligible,
     });
   }
 }
@@ -800,6 +887,7 @@ export function getAtRiskSummariesForStudent(studentId: string): AttendanceThres
 export function getLecturerSummariesForLecturer(lecturerId: string): LecturerAttendanceSummary[] {
   return lecturerAttendanceSummaries.filter((s) => s.lecturerId === lecturerId);
 }
+
 export function getCourseComplianceSnapshot(courseUnitId: string): { avgAttendancePct: number; atRiskCount: number; enrolledCount: number } {
   const summaries = attendanceThresholdSummaries.filter((s) => s.courseUnitId === courseUnitId);
   const avgAttendancePct = summaries.length ? Math.round((summaries.reduce((sum, s) => sum + s.attendancePct, 0) / summaries.length) * 10) / 10 : 0;

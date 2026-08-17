@@ -8,13 +8,12 @@ import {
   getCourseUnitById,
   getCourseComplianceSnapshot,
   getEnrolledStudents,
-  getThresholdSummariesForStudent,
-  getClassInstancesForCourse,
-  getAttendanceRecordsForClassInstance,
+  calculateCourseStats,
+  type SessionStatus,
 } from '../../data/mockData';
 import { Drawer } from '../../components/shared/Drawer';
 import { StatusPill, type Status } from '../../components/shared/StatusPill';
-import type { User, AttendanceThresholdSummary, ClassInstance, AttendanceRecord, PresenceMethod } from '../../types';
+import type { User, PresenceMethod } from '../../types';
 
 const METHOD_LABEL: Record<PresenceMethod, string> = {
   qr_chain_verified: 'Automatic (QR + Face)',
@@ -24,11 +23,12 @@ const METHOD_LABEL: Record<PresenceMethod, string> = {
   admin_corrected: 'Corrected by admin',
 };
 
-function pillStatus(verificationStatus: string): Status {
-  if (verificationStatus === 'verified' || verificationStatus === 'confirmed') return 'verified';
-  if (verificationStatus === 'disputed') return 'disputed';
-  if (verificationStatus === 'rejected') return 'rejected';
-  return 'unverified';
+function pillStatus(status: SessionStatus): Status | null {
+  if (status === 'verified') return 'verified';
+  if (status === 'disputed') return 'disputed';
+  if (status === 'rejected') return 'rejected';
+  if (status === 'unverified') return 'unverified';
+  return null; // 'absent' — no record, rendered as its own badge below
 }
 
 export function CoursesPanel() {
@@ -136,12 +136,10 @@ function CourseRosterView({
 }) {
   const roster = useMemo(() => getEnrolledStudents(course.id), [course.id]);
 
-  const rosterWithSummary = useMemo(
-    () =>
-      roster.map((student) => {
-        const summary = getThresholdSummariesForStudent(student.id).find((s) => s.courseUnitId === course.id);
-        return { student, summary };
-      }),
+  // calculateCourseStats is the same helper the student portal uses, so a student's
+  // percentage and at-risk badge here always agree with what they see on their own device.
+  const rosterWithStats = useMemo(
+    () => roster.map((student) => ({ student, stats: calculateCourseStats(student.id, course.id) })),
     [roster, course.id]
   );
 
@@ -162,53 +160,50 @@ function CourseRosterView({
       </div>
 
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-        Enrolled students ({rosterWithSummary.length})
+        Enrolled students ({rosterWithStats.length})
       </p>
 
-      {rosterWithSummary.length === 0 ? (
+      {rosterWithStats.length === 0 ? (
         <p className="rounded-2xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
           No students enrolled yet.
         </p>
       ) : (
         <ul className="space-y-2">
-          {rosterWithSummary.map(({ student, summary }) => {
-            const isAtRisk = summary ? !summary.isEligible || summary.attendancePct < summary.thresholdPct : false;
-            return (
-              <li key={student.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelectStudent(student)}
-                  aria-label={`View ${student.fullName} attendance breakdown for ${course.code}`}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-left shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/70"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-                      style={{ backgroundColor: student.avatarColor }}
-                    >
-                      {student.initials}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">{student.fullName}</p>
-                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{student.institutionalId}</p>
-                    </div>
+          {rosterWithStats.map(({ student, stats }) => (
+            <li key={student.id}>
+              <button
+                type="button"
+                onClick={() => onSelectStudent(student)}
+                aria-label={`View ${student.fullName} attendance breakdown for ${course.code}`}
+                className="flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-left shadow-sm transition-colors hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/70"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+                    style={{ backgroundColor: student.avatarColor }}
+                  >
+                    {student.initials}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">{student.fullName}</p>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{student.institutionalId}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {isAtRisk && (
-                      <span className="flex items-center gap-1 rounded-full border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:border-amber-500/50 dark:text-amber-400">
-                        <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-                        At-Risk
-                      </span>
-                    )}
-                    <span className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-white">
-                      {summary ? `${summary.attendancePct}%` : '—'}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {stats.isAtRisk && (
+                    <span className="flex items-center gap-1 rounded-full border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:border-amber-500/50 dark:text-amber-400">
+                      <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                      At-Risk
                     </span>
-                    <ChevronRight className="h-4 w-4 text-zinc-300 dark:text-zinc-600" aria-hidden="true" />
-                  </div>
-                </button>
-              </li>
-            );
-          })}
+                  )}
+                  <span className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-white">
+                    {stats.totalClasses > 0 ? `${stats.attendancePct}%` : '—'}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-zinc-300 dark:text-zinc-600" aria-hidden="true" />
+                </div>
+              </button>
+            </li>
+          ))}
         </ul>
       )}
 
@@ -228,27 +223,14 @@ function StudentCourseDrawer({
   student: User | null;
   course: NonNullable<ReturnType<typeof getCourseUnitById>>;
 }) {
-  const summary: AttendanceThresholdSummary | undefined = student
-    ? getThresholdSummariesForStudent(student.id).find((s) => s.courseUnitId === course.id)
-    : undefined;
-
-  const sessions = useMemo(() => {
-    if (!student) return [];
-    const instances = getClassInstancesForCourse(course.id);
-    return instances
-      .map((instance) => {
-        const records = getAttendanceRecordsForClassInstance(instance.id).filter((r) => r.userId === student.id);
-        return { instance, record: records[0] as AttendanceRecord | undefined };
-      })
-      .filter(({ instance }: { instance: ClassInstance }) => instance.status === 'completed' || instance.status === 'active')
-      .sort((a, b) => new Date(b.instance.classStartAt).getTime() - new Date(a.instance.classStartAt).getTime());
-  }, [student, course.id]);
-
-  const isAtRisk = summary ? !summary.isEligible || summary.attendancePct < summary.thresholdPct : false;
+  // Single source of truth: same helper, same Unverified/Absent rules, as the
+  // student portal's own CourseDetailDrawer — "11/15 Attended" here always means
+  // the same thing it means when the student looks at their own device.
+  const stats = student ? calculateCourseStats(student.id, course.id) : null;
 
   return (
     <Drawer open={open} onClose={onClose} title={student?.fullName} subtitle={student ? `${student.institutionalId} · ${course.code}` : undefined}>
-      {student && (
+      {student && stats && (
         <>
           <div className="mb-5 flex flex-col items-center text-center">
             <span
@@ -263,49 +245,50 @@ function StudentCourseDrawer({
             </p>
           </div>
 
-          {summary && (
-            <div className="mb-5 grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">{summary.attendancePct}%</p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">of {summary.thresholdPct}% threshold</p>
-              </div>
-              <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <p className="text-lg font-semibold text-zinc-900 dark:text-white">
-                  {summary.attendedClasses}/{summary.totalClasses}
-                </p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Classes attended</p>
-              </div>
-              <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
-                <p className={`text-lg font-semibold ${isAtRisk ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {isAtRisk ? 'Active' : 'Clear'}
-                </p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">At-risk status</p>
-              </div>
+          <div className="mb-5 grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white">{stats.attendancePct}%</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">of {stats.thresholdPct}% threshold</p>
             </div>
-          )}
+            <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white">
+                {stats.attendedClasses}/{stats.totalClasses}
+              </p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Classes attended</p>
+            </div>
+            <div className="rounded-xl bg-zinc-50 p-3 text-center dark:bg-zinc-800">
+              <p className={`text-lg font-semibold ${stats.isAtRisk ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {stats.isAtRisk ? 'Active' : 'Clear'}
+              </p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">At-risk status</p>
+            </div>
+          </div>
 
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Recent sessions</p>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Session history</p>
           <ul className="space-y-2">
-            {sessions.map(({ instance, record }) => (
-              <li key={instance.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-                    {new Date(instance.classStartAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </p>
-                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                    {instance.venueName} {record && `· ${METHOD_LABEL[record.presenceMethod]}`}
-                  </p>
-                </div>
-                {record ? (
-                  <StatusPill status={pillStatus(record.verificationStatus)} />
-                ) : (
-                  <span className="rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:border-rose-500/40 dark:text-rose-400">
-                    Absent
-                  </span>
-                )}
-              </li>
-            ))}
-            {sessions.length === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">No sessions recorded yet.</p>}
+            {stats.sessions.map(({ instance, record, status }) => {
+              const pill = pillStatus(status);
+              return (
+                <li key={instance.id} className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+                      {new Date(instance.classStartAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </p>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {instance.venueName} {record && `· ${METHOD_LABEL[record.presenceMethod]}`}
+                    </p>
+                  </div>
+                  {pill ? (
+                    <StatusPill status={pill} />
+                  ) : (
+                    <span className="rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:border-rose-500/40 dark:text-rose-400">
+                      Absent
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+            {stats.sessions.length === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">No sessions recorded yet.</p>}
           </ul>
         </>
       )}
