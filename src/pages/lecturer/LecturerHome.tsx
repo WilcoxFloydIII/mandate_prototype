@@ -58,7 +58,7 @@ export function LecturerHome() {
         </div>
       </div>
 
-      <div id="active-class-section" className="mt-4 space-y-4 px-4">
+      <div id="active-class-section" className="-mt-4 space-y-4 px-4">
         {nowClass && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">{nowClass.status === 'active' ? 'Now' : 'Up next'}</p>
